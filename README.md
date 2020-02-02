@@ -89,7 +89,12 @@ $ sudo vim /Library/LaunchDaemons/lightsocks.plist
 ```
 启用开机自启动：
 ```
-launchctl load -w /Library/LaunchDaemons/lightsocks.plist
+sudo launchctl load -w /Library/LaunchDaemons/lightsocks.plist
+```
+关闭开机自启动：
+```
+sudo launchctl stop /Library/LaunchDaemons/lightsocks.plist
+sudo launchctl unload -w /Library/LaunchDaemons/lightsocks.plist
 ```
 #### 注意：
 - lightsocks-local 和 lightsocks-server 的 password 必须一致才能正常正常使用，password 不要泄露。
