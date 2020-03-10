@@ -9,6 +9,7 @@ import (
 
 	"github.com/gwuhaolin/lightsocks"
 	"github.com/gwuhaolin/lightsocks/cmd"
+	"github.com/gwuhaolin/lightsocks/server"
 	"github.com/phayes/freeport"
 )
 
@@ -37,7 +38,7 @@ func main() {
 	config.SaveConfig()
 
 	// 启动 server 端并监听
-	lsServer, err := lightsocks.NewLsServer(config.Password, config.ListenAddr)
+	lsServer, err := server.NewLsServer(config.Password, config.ListenAddr)
 	if err != nil {
 		log.Fatalln(err)
 	}

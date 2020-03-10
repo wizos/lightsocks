@@ -1,12 +1,14 @@
-package lightsocks
+package local
 
 import (
 	"log"
 	"net"
+
+	"github.com/gwuhaolin/lightsocks"
 )
 
 type LsLocal struct {
-	Cipher     *cipher
+	Cipher     *lightsocks.Cipher
 	ListenAddr *net.TCPAddr
 	RemoteAddr *net.TCPAddr
 }
@@ -18,7 +20,7 @@ type LsLocal struct {
 // 3. 转发socket数据到墙外代理服务端
 // 4. 把服务端返回的数据转发给用户的浏览器
 func NewLsLocal(password string, listenAddr, remoteAddr string) (*LsLocal, error) {
-	bsPassword, err := parsePassword(password)
+	bsPassword, err := lightsocks.ParsePassword(password)
 	if err != nil {
 		return nil, err
 	}
@@ -31,7 +33,7 @@ func NewLsLocal(password string, listenAddr, remoteAddr string) (*LsLocal, error
 		return nil, err
 	}
 	return &LsLocal{
-		Cipher:     newCipher(bsPassword),
+		Cipher:     lightsocks.NewCipher(bsPassword),
 		ListenAddr: structListenAddr,
 		RemoteAddr: structRemoteAddr,
 	}, nil
@@ -39,13 +41,13 @@ func NewLsLocal(password string, listenAddr, remoteAddr string) (*LsLocal, error
 
 // 本地端启动监听，接收来自本机浏览器的连接
 func (local *LsLocal) Listen(didListen func(listenAddr net.Addr)) error {
-	return ListenSecureTCP(local.ListenAddr, local.Cipher, local.handleConn, didListen)
+	return lightsocks.ListenSecureTCP(local.ListenAddr, local.Cipher, local.handleConn, didListen)
 }
 
-func (local *LsLocal) handleConn(userConn *SecureTCPConn) {
+func (local *LsLocal) handleConn(userConn *lightsocks.SecureTCPConn) {
 	defer userConn.Close()
 
-	proxyServer, err := DialTCPSecure(local.RemoteAddr, local.Cipher)
+	proxyServer, err := lightsocks.DialTCPSecure(local.RemoteAddr, local.Cipher)
 	if err != nil {
 		log.Println(err)
 		return

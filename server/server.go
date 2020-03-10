@@ -1,12 +1,14 @@
-package lightsocks
+package server
 
 import (
 	"encoding/binary"
 	"net"
+
+	"github.com/gwuhaolin/lightsocks"
 )
 
 type LsServer struct {
-	Cipher     *cipher
+	Cipher     *lightsocks.Cipher
 	ListenAddr *net.TCPAddr
 }
 
@@ -16,7 +18,7 @@ type LsServer struct {
 // 2. 解密本地代理客户端请求的数据，解析 SOCKS5 协议，连接用户浏览器真正想要连接的远程服务器
 // 3. 转发用户浏览器真正想要连接的远程服务器返回的数据的加密后的内容到本地代理客户端
 func NewLsServer(password string, listenAddr string) (*LsServer, error) {
-	bsPassword, err := parsePassword(password)
+	bsPassword, err := lightsocks.ParsePassword(password)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +27,7 @@ func NewLsServer(password string, listenAddr string) (*LsServer, error) {
 		return nil, err
 	}
 	return &LsServer{
-		Cipher:     newCipher(bsPassword),
+		Cipher:     lightsocks.NewCipher(bsPassword),
 		ListenAddr: structListenAddr,
 	}, nil
 
@@ -33,12 +35,12 @@ func NewLsServer(password string, listenAddr string) (*LsServer, error) {
 
 // 运行服务端并且监听来自本地代理客户端的请求
 func (lsServer *LsServer) Listen(didListen func(listenAddr net.Addr)) error {
-	return ListenSecureTCP(lsServer.ListenAddr, lsServer.Cipher, lsServer.handleConn, didListen)
+	return lightsocks.ListenSecureTCP(lsServer.ListenAddr, lsServer.Cipher, lsServer.handleConn, didListen)
 }
 
 // 解 SOCKS5 协议
 // https://www.ietf.org/rfc/rfc1928.txt
-func (lsServer *LsServer) handleConn(localConn *SecureTCPConn) {
+func (lsServer *LsServer) handleConn(localConn *lightsocks.SecureTCPConn) {
 	defer localConn.Close()
 	buf := make([]byte, 256)
 
@@ -153,7 +155,7 @@ func (lsServer *LsServer) handleConn(localConn *SecureTCPConn) {
 		}
 	}()
 	// 从 dstServer 读取数据发送到 localUser，这里因为处在翻墙阶段出现网络错误的概率更大
-	(&SecureTCPConn{
+	(&lightsocks.SecureTCPConn{
 		Cipher:          localConn.Cipher,
 		ReadWriteCloser: dstServer,
 	}).EncodeCopy(localConn)

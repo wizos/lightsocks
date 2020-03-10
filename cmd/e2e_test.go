@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"github.com/gwuhaolin/lightsocks"
-	"golang.org/x/net/proxy"
 	"io"
 	"log"
 	"math/rand"
@@ -11,6 +9,11 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/gwuhaolin/lightsocks"
+	"github.com/gwuhaolin/lightsocks/local"
+	"github.com/gwuhaolin/lightsocks/server"
+	"golang.org/x/net/proxy"
 )
 
 const (
@@ -64,11 +67,11 @@ func runEchoServer() {
 
 func runLightsocksProxyServer() {
 	password := lightsocks.RandPassword()
-	serverS, err := lightsocks.NewLsLocal(password, LightSocksProxyLocalAddr, LightSocksProxyServerAddr)
+	serverS, err := local.NewLsLocal(password, LightSocksProxyLocalAddr, LightSocksProxyServerAddr)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	localS, err := lightsocks.NewLsServer(password, LightSocksProxyServerAddr)
+	localS, err := server.NewLsServer(password, LightSocksProxyServerAddr)
 	if err != nil {
 		log.Fatalln(err)
 	}
