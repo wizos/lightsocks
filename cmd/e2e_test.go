@@ -76,19 +76,13 @@ func runLightsocksProxyServer() {
 		log.Fatalln(err)
 	}
 	go func() {
-		_, err := serverS.Listen(func(listenAddr *net.TCPAddr) {
+		log.Fatalln(serverS.Listen(func(listenAddr *net.TCPAddr) {
 			log.Println(listenAddr)
-		})
-		if err != nil {
-			log.Fatalln(err)
-		}
+		}))
 	}()
-	_, err = localS.Listen(func(listenAddr *net.TCPAddr) {
+	log.Fatalln(localS.Listen(func(listenAddr *net.TCPAddr) {
 		log.Println(listenAddr)
-	})
-	if err != nil {
-		log.Fatalln(err)
-	}
+	}))
 }
 
 // 发生一次连接测试经过代理后的数据传输的正确性

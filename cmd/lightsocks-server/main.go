@@ -42,17 +42,12 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	_, err = lsServer.Listen(func(listenAddr *net.TCPAddr) {
+	log.Fatalln(lsServer.Listen(func(listenAddr *net.TCPAddr) {
 		log.Println(fmt.Sprintf(`
 lightsocks-server:%s 启动成功，配置如下：
 服务监听地址：
 %s
 密码：
 %s`, version, listenAddr, config.Password))
-	})
-	if err != nil {
-		log.Fatalln(err)
-	}
-	// 防止退出
-	select {}
+	}))
 }

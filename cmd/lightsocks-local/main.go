@@ -30,7 +30,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	_, err = lsLocal.Listen(func(listenAddr *net.TCPAddr) {
+	log.Fatalln(lsLocal.Listen(func(listenAddr *net.TCPAddr) {
 		log.Println(fmt.Sprintf(`
 lightsocks-local:%s 启动成功，配置如下：
 本地监听地址：
@@ -39,10 +39,5 @@ lightsocks-local:%s 启动成功，配置如下：
 %s
 密码：
 %s`, version, listenAddr, config.RemoteAddr, config.Password))
-	})
-	if err != nil {
-		log.Fatalln(err)
-	}
-	// 防止退出
-	select {}
+	}))
 }
