@@ -96,29 +96,41 @@ func DialTCPSecure(raddr *net.TCPAddr, cipher *Cipher) (*SecureTCPConn, error) {
 }
 
 // see net.ListenTCP
-func ListenSecureTCP(laddr *net.TCPAddr, cipher *Cipher, handleConn func(localConn *SecureTCPConn), didListen func(listenAddr net.Addr)) error {
+func ListenSecureTCP(laddr *net.TCPAddr, cipher *Cipher, handleConn func(localConn *SecureTCPConn), didListen func(listenAddr *net.TCPAddr)) (func(), error) {
 	listener, err := net.ListenTCP("tcp", laddr)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	defer listener.Close()
+	closeFlag := new(bool)
+	go func() {
+		defer listener.Close()
+		for {
+			if *(closeFlag) == true {
+				return
+			}
+			localConn, err := listener.AcceptTCP()
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			// localConn被关闭时直接清除所有数据 不管没有发送的数据
+			localConn.SetLinger(0)
+			go handleConn(&SecureTCPConn{
+				ReadWriteCloser: localConn,
+				Cipher:          cipher,
+			})
+		}
+	}()
 
 	if didListen != nil {
-		didListen(listener.Addr())
+		didListen(listener.Addr().(*net.TCPAddr))
 	}
 
-	for {
-		localConn, err := listener.AcceptTCP()
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		// localConn被关闭时直接清除所有数据 不管没有发送的数据
-		localConn.SetLinger(0)
-		go handleConn(&SecureTCPConn{
-			ReadWriteCloser: localConn,
-			Cipher:          cipher,
-		})
-	}
+	return func() {
+		*closeFlag = true
+		// 刷下 listener.AcceptTCP()
+		net.DialTCP("tcp", nil, laddr)
+		listener.Close()
+	}, nil
 }
