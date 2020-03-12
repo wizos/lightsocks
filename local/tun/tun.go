@@ -25,7 +25,8 @@ func StartTunServer(password string, remoteAddr string, fd int) (err error) {
 	if f == nil {
 		return errors.New("无法打开VPN虚拟网卡")
 	}
-	return lsLocal.Listen(func(listenAddr *net.TCPAddr) {
+	defer f.Close()
+	lsLocal.Listen(func(listenAddr *net.TCPAddr) {
 		log.Println("StartTunServer", listenAddr)
 		// 成功启动LS服务器，开启转发
 		core.RegisterTCPConnHandler(socks.NewTCPHandler(listenAddr.IP.String(), uint16(listenAddr.Port)))
@@ -35,4 +36,5 @@ func StartTunServer(password string, remoteAddr string, fd int) (err error) {
 		})
 		io.Copy(lwipStack, f) // 从tun中读
 	})
+	return
 }
