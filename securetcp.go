@@ -104,7 +104,8 @@ func ListenSecureTCP(laddr *net.TCPAddr, cipher *Cipher, handleConn func(localCo
 	defer listener.Close()
 
 	if didListen != nil {
-		didListen(listener.Addr().(*net.TCPAddr))
+		// didListen 可能有阻塞操作
+		go didListen(listener.Addr().(*net.TCPAddr))
 	}
 
 	for {
