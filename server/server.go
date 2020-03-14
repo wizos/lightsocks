@@ -35,7 +35,7 @@ func NewLsServer(password string, listenAddr string) (*LsServer, error) {
 
 // 运行服务端并且监听来自本地代理客户端的请求
 func (lsServer *LsServer) Listen(didListen func(listenAddr *net.TCPAddr)) error {
-	return lightsocks.ListenSecureTCP(lsServer.ListenAddr, lsServer.Cipher, lsServer.handleConn, didListen)
+	return lightsocks.ListenEncryptedTCP(lsServer.ListenAddr, lsServer.Cipher, lsServer.handleConn, didListen)
 }
 
 // 解 SOCKS5 协议

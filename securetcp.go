@@ -84,11 +84,14 @@ func (secureSocket *SecureTCPConn) DecodeCopy(dst io.Writer) error {
 }
 
 // see net.DialTCP
-func DialTCPSecure(raddr *net.TCPAddr, cipher *Cipher) (*SecureTCPConn, error) {
+func DialEncryptedTCP(raddr *net.TCPAddr, cipher *Cipher) (*SecureTCPConn, error) {
 	remoteConn, err := net.DialTCP("tcp", nil, raddr)
 	if err != nil {
 		return nil, err
 	}
+	// Conn被关闭时直接清除所有数据 不管没有发送的数据
+	remoteConn.SetLinger(0)
+
 	return &SecureTCPConn{
 		ReadWriteCloser: remoteConn,
 		Cipher:          cipher,
@@ -96,7 +99,7 @@ func DialTCPSecure(raddr *net.TCPAddr, cipher *Cipher) (*SecureTCPConn, error) {
 }
 
 // see net.ListenTCP
-func ListenSecureTCP(laddr *net.TCPAddr, cipher *Cipher, handleConn func(localConn *SecureTCPConn), didListen func(listenAddr *net.TCPAddr)) error {
+func ListenEncryptedTCP(laddr *net.TCPAddr, cipher *Cipher, handleConn func(localConn *SecureTCPConn), didListen func(listenAddr *net.TCPAddr)) error {
 	listener, err := net.ListenTCP("tcp", laddr)
 	if err != nil {
 		return err

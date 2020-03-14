@@ -41,21 +41,18 @@ func NewLsLocal(password string, listenAddr, remoteAddr string) (*LsLocal, error
 
 // 本地端启动监听，接收来自本机浏览器的连接
 func (local *LsLocal) Listen(didListen func(listenAddr *net.TCPAddr)) error {
-	return lightsocks.ListenSecureTCP(local.ListenAddr, local.Cipher, local.handleConn, didListen)
+	return lightsocks.ListenEncryptedTCP(local.ListenAddr, local.Cipher, local.handleConn, didListen)
 }
 
 func (local *LsLocal) handleConn(userConn *lightsocks.SecureTCPConn) {
 	defer userConn.Close()
 
-	proxyServer, err := lightsocks.DialTCPSecure(local.RemoteAddr, local.Cipher)
+	proxyServer, err := lightsocks.DialEncryptedTCP(local.RemoteAddr, local.Cipher)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	defer proxyServer.Close()
-
-	// Conn被关闭时直接清除所有数据 不管没有发送的数据
-	//proxyServer.SetLinger(0)
 
 	// 进行转发
 	// 从 proxyServer 读取数据发送到 localUser
