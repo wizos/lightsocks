@@ -4,11 +4,26 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 )
 
 const (
 	bufSize = 1024
 )
+
+var bpool sync.Pool
+
+func init() {
+	bpool.New = func() interface{} {
+		return make([]byte, bufSize)
+	}
+}
+func bufferPoolGet() []byte {
+	return bpool.Get().([]byte)
+}
+func bufferPoolPut(b []byte) {
+	bpool.Put(b)
+}
 
 // 加密传输的 TCP Socket
 type SecureTCPConn struct {
@@ -34,7 +49,8 @@ func (secureSocket *SecureTCPConn) EncodeWrite(bs []byte) (int, error) {
 
 // 从src中源源不断的读取原数据加密后写入到dst，直到src中没有数据可以再读取
 func (secureSocket *SecureTCPConn) EncodeCopy(dst io.ReadWriteCloser) error {
-	buf := make([]byte, bufSize)
+	buf := bufferPoolGet()
+	defer bufferPoolPut(buf)
 	for {
 		readCount, errRead := secureSocket.Read(buf)
 		if errRead != nil {
@@ -61,7 +77,8 @@ func (secureSocket *SecureTCPConn) EncodeCopy(dst io.ReadWriteCloser) error {
 
 // 从src中源源不断的读取加密后的数据解密后写入到dst，直到src中没有数据可以再读取
 func (secureSocket *SecureTCPConn) DecodeCopy(dst io.Writer) error {
-	buf := make([]byte, bufSize)
+	buf := bufferPoolGet()
+	defer bufferPoolPut(buf)
 	for {
 		readCount, errRead := secureSocket.DecodeRead(buf)
 		if errRead != nil {
