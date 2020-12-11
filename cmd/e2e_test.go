@@ -1,10 +1,6 @@
 package cmd
 
 import (
-	"github.com/gwuhaolin/lightsocks/core"
-	"github.com/gwuhaolin/lightsocks/local"
-	"github.com/gwuhaolin/lightsocks/server"
-	"golang.org/x/net/proxy"
 	"io"
 	"log"
 	"math/rand"
@@ -13,6 +9,11 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/gwuhaolin/lightsocks"
+	"github.com/gwuhaolin/lightsocks/local"
+	"github.com/gwuhaolin/lightsocks/server"
+	"golang.org/x/net/proxy"
 )
 
 const (
@@ -65,17 +66,21 @@ func runEchoServer() {
 }
 
 func runLightsocksProxyServer() {
-	password := core.RandPassword()
-	localAddr, _ := net.ResolveTCPAddr("tcp", LightSocksProxyLocalAddr)
-	serverAddr, _ := net.ResolveTCPAddr("tcp", LightSocksProxyServerAddr)
-	serverS := local.New(password, localAddr, serverAddr)
-	localS := server.New(password, serverAddr)
+	password := lightsocks.RandPassword()
+	serverS, err := local.NewLsLocal(password, LightSocksProxyLocalAddr, LightSocksProxyServerAddr)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	localS, err := server.NewLsServer(password, LightSocksProxyServerAddr)
+	if err != nil {
+		log.Fatalln(err)
+	}
 	go func() {
-		log.Fatalln(serverS.Listen(func(listenAddr net.Addr) {
+		log.Fatalln(serverS.Listen(func(listenAddr *net.TCPAddr) {
 			log.Println(listenAddr)
 		}))
 	}()
-	log.Fatalln(localS.Listen(func(listenAddr net.Addr) {
+	log.Fatalln(localS.Listen(func(listenAddr *net.TCPAddr) {
 		log.Println(listenAddr)
 	}))
 }

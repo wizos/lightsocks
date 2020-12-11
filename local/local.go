@@ -1,13 +1,16 @@
 package local
 
 import (
-	"github.com/gwuhaolin/lightsocks/core"
 	"log"
 	"net"
+
+	"github.com/gwuhaolin/lightsocks"
 )
 
 type LsLocal struct {
-	*core.SecureSocket
+	Cipher     *lightsocks.Cipher
+	ListenAddr *net.TCPAddr
+	RemoteAddr *net.TCPAddr
 }
 
 // 新建一个本地端
@@ -16,58 +19,45 @@ type LsLocal struct {
 // 2. 转发前加密数据
 // 3. 转发socket数据到墙外代理服务端
 // 4. 把服务端返回的数据转发给用户的浏览器
-func New(password *core.Password, listenAddr, remoteAddr *net.TCPAddr) *LsLocal {
-	return &LsLocal{
-		SecureSocket: &core.SecureSocket{
-			Cipher:     core.NewCipher(password),
-			ListenAddr: listenAddr,
-			RemoteAddr: remoteAddr,
-		},
+func NewLsLocal(password string, listenAddr, remoteAddr string) (*LsLocal, error) {
+	bsPassword, err := lightsocks.ParsePassword(password)
+	if err != nil {
+		return nil, err
 	}
+	structListenAddr, err := net.ResolveTCPAddr("tcp", listenAddr)
+	if err != nil {
+		return nil, err
+	}
+	structRemoteAddr, err := net.ResolveTCPAddr("tcp", remoteAddr)
+	if err != nil {
+		return nil, err
+	}
+	return &LsLocal{
+		Cipher:     lightsocks.NewCipher(bsPassword),
+		ListenAddr: structListenAddr,
+		RemoteAddr: structRemoteAddr,
+	}, nil
 }
 
 // 本地端启动监听，接收来自本机浏览器的连接
-func (local *LsLocal) Listen(didListen func(listenAddr net.Addr)) error {
-	listener, err := net.ListenTCP("tcp", local.ListenAddr)
-	if err != nil {
-		return err
-	}
-
-	defer listener.Close()
-
-	if didListen != nil {
-		didListen(listener.Addr())
-	}
-
-	for {
-		userConn, err := listener.AcceptTCP()
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		// userConn被关闭时直接清除所有数据 不管没有发送的数据
-		userConn.SetLinger(0)
-		go local.handleConn(userConn)
-	}
-	return nil
+func (local *LsLocal) Listen(didListen func(listenAddr *net.TCPAddr)) error {
+	return lightsocks.ListenEncryptedTCP(local.ListenAddr, local.Cipher, local.handleConn, didListen)
 }
 
-func (local *LsLocal) handleConn(userConn *net.TCPConn) {
+func (local *LsLocal) handleConn(userConn *lightsocks.SecureTCPConn) {
 	defer userConn.Close()
 
-	proxyServer, err := local.DialRemote()
+	proxyServer, err := lightsocks.DialEncryptedTCP(local.RemoteAddr, local.Cipher)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 	defer proxyServer.Close()
-	// Conn被关闭时直接清除所有数据 不管没有发送的数据
-	proxyServer.SetLinger(0)
 
 	// 进行转发
 	// 从 proxyServer 读取数据发送到 localUser
 	go func() {
-		err := local.DecodeCopy(userConn, proxyServer)
+		err := proxyServer.DecodeCopy(userConn)
 		if err != nil {
 			// 在 copy 的过程中可能会存在网络超时等 error 被 return，只要有一个发生了错误就退出本次工作
 			userConn.Close()
@@ -75,5 +65,5 @@ func (local *LsLocal) handleConn(userConn *net.TCPConn) {
 		}
 	}()
 	// 从 localUser 发送数据发送到 proxyServer，这里因为处在翻墙阶段出现网络错误的概率更大
-	local.EncodeCopy(proxyServer, userConn)
+	userConn.EncodeCopy(proxyServer)
 }
